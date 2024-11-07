@@ -37,7 +37,7 @@ resource "azurerm_storage_container" "sc" {
 }
 
 resource "azurerm_service_plan" "sp" {
-  name                = join("-", [var.app_name, random_string.rs.result, "sp"])
+  name                = join("-", [var.app_service_name, random_string.rs.result, "sp"])
   location            = data.azurerm_resource_group.rg.location
   resource_group_name = data.azurerm_resource_group.rg.name
   os_type             = "Linux"
@@ -45,7 +45,9 @@ resource "azurerm_service_plan" "sp" {
 }
 
 resource "azurerm_linux_function_app" "fa" {
-  name                          = join("-", [var.app_name, random_string.rs.result, "azfn"])
+  for_each = var.function_apps
+
+  name                          = join("-", [each.key, random_string.rs.result, "azfn"])
   location                      = data.azurerm_resource_group.rg.location
   resource_group_name           = data.azurerm_resource_group.rg.name
   service_plan_id               = azurerm_service_plan.sp.id
@@ -58,13 +60,16 @@ resource "azurerm_linux_function_app" "fa" {
 
   site_config {
     application_stack {
-      powershell_core_version = "7.4"
+      powershell_core_version = each.value.runtime.name == "powershell" ? each.value.runtime.version : null
+      python_version          = each.value.runtime.name == "python" ? each.value.runtime.version : null
     }
   }
 }
 
 resource "azurerm_role_assignment" "fn2sa" {
+  for_each = var.function_apps
+
   scope                = azurerm_storage_account.sa.id
   role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = azurerm_linux_function_app.fa.identity[0].principal_id
+  principal_id         = azurerm_linux_function_app.fa[each.key].identity[0].principal_id
 }
