@@ -31,7 +31,9 @@ resource "azurerm_storage_account" "sa" {
 }
 
 resource "azurerm_storage_container" "sc" {
-  name                  = "docs"
+  for_each = var.function_apps
+
+  name                  = each.key
   storage_account_name  = azurerm_storage_account.sa.name
   container_access_type = "private"
 }
@@ -66,10 +68,10 @@ resource "azurerm_linux_function_app" "fa" {
   }
 }
 
-resource "azurerm_role_assignment" "fn2sa" {
+resource "azurerm_role_assignment" "fn2sc" {
   for_each = var.function_apps
 
-  scope                = azurerm_storage_account.sa.id
+  scope                = azurerm_storage_container.sc[each.key].resource_manager_id
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = azurerm_linux_function_app.fa[each.key].identity[0].principal_id
 }
