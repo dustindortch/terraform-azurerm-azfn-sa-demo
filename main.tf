@@ -38,34 +38,24 @@ resource "azurerm_storage_container" "sc" {
   container_access_type = "private"
 }
 
-resource "azurerm_service_plan" "sp" {
-  name                = join("-", [var.app_service_name, random_string.rs.result, "sp"])
-  location            = data.azurerm_resource_group.rg.location
-  resource_group_name = data.azurerm_resource_group.rg.name
-  os_type             = "Linux"
-  sku_name            = "Y1"
+locals {
+  function_apps = { for k, v in var.function_apps : k => merge(
+    v,
+    {
+      name = join("-", [k, random_string.rs.result, "azfn"])
+    }
+  ) }
 }
 
-resource "azurerm_linux_function_app" "fa" {
-  for_each = var.function_apps
+module "app" {
+  source  = "app.terraform.io/acdmy-uto-rbac-1myfdxldfbzt/azfn-asp/azurerm"
+  version = "~> 1.0"
 
-  name                          = join("-", [each.key, random_string.rs.result, "azfn"])
-  location                      = data.azurerm_resource_group.rg.location
-  resource_group_name           = data.azurerm_resource_group.rg.name
-  service_plan_id               = azurerm_service_plan.sp.id
-  storage_uses_managed_identity = true
-  storage_account_name          = azurerm_storage_account.sa.name
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  site_config {
-    application_stack {
-      powershell_core_version = each.value.runtime.name == "powershell" ? each.value.runtime.version : null
-      python_version          = each.value.runtime.name == "python" ? each.value.runtime.version : null
-    }
-  }
+  name                 = join("-", [var.app_service_name, random_string.rs.result, "sp"])
+  functions            = local.function_apps
+  resource_group_name  = data.azurerm_resource_group.rg.name
+  location             = data.azurerm_resource_group.rg.location
+  storage_account_name = azurerm_storage_account.sa.name
 }
 
 resource "azurerm_role_assignment" "fn2sc" {
@@ -73,5 +63,5 @@ resource "azurerm_role_assignment" "fn2sc" {
 
   scope                = azurerm_storage_container.sc[each.key].resource_manager_id
   role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = azurerm_linux_function_app.fa[each.key].identity[0].principal_id
+  principal_id         = module.app.function_apps[each.key].identity[0].principal_id
 }
