@@ -36,7 +36,6 @@ resource "azurerm_storage_container" "sc" {
   container_access_type = "private"
 }
 
-# Function App
 resource "azurerm_service_plan" "sp" {
   name                = join("-", [var.app_name, random_string.rs.result, "sp"])
   location            = data.azurerm_resource_group.rg.location
@@ -57,7 +56,11 @@ resource "azurerm_linux_function_app" "fa" {
     type = "SystemAssigned"
   }
 
-  site_config {}
+  site_config {
+    application_stack {
+      powershell_core_version = "7.4"
+    }
+  }
 }
 
 resource "azurerm_role_assignment" "fn2sa" {

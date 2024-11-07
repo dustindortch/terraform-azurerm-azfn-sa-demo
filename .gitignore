@@ -20,3 +20,15 @@ crash.log
 # Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
 # example: *tfplan*
 *tfplan*
+
+
+# Azure Functions artifacts
+bin
+obj
+appsettings.json
+local.settings.json
+
+# Azurite artifacts
+__blobstorage__
+__queuestorage__
+__azurite_db*__.json
