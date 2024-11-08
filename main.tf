@@ -48,7 +48,7 @@ locals {
 }
 
 module "app" {
-  source  = "app.terraform.io/acdmy-uto-rbac-1myfdxldfbzt/azfn-asp/azurerm"
+  source  = "app.terraform.io/cdw-dvs/azfn-asp/azurerm"
   version = "~> 1.0"
 
   name                 = join("-", [var.app_service_name, random_string.rs.result, "sp"])
